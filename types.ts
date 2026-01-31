@@ -8,6 +8,8 @@ export interface ScriptSettings {
     showGrid: boolean;
     eyeContactFix: boolean;
     opacity: number;
+    selectedMicId: string;
+    selectedCameraId: string;
 }
 
 export interface AppState {

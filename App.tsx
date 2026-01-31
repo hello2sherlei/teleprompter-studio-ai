@@ -69,7 +69,9 @@ const App: React.FC = () => {
             mirrorVideo: false,
             showGrid: false,
             eyeContactFix: false,
-            opacity: 10
+            opacity: 10,
+            selectedMicId: '',
+            selectedCameraId: ''
         };
     });
 
@@ -195,9 +197,17 @@ const App: React.FC = () => {
     // Recording functions
     const startRecording = useCallback(async () => {
         try {
+            // Build constraints with selected devices
+            const videoConstraints: boolean | MediaTrackConstraints = settings.selectedCameraId
+                ? { deviceId: { exact: settings.selectedCameraId } }
+                : true;
+            const audioConstraints: boolean | MediaTrackConstraints = micOn
+                ? (settings.selectedMicId ? { deviceId: { exact: settings.selectedMicId } } : true)
+                : false;
+
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: micOn
+                video: videoConstraints,
+                audio: audioConstraints
             });
 
             const mediaRecorder = new MediaRecorder(stream, {

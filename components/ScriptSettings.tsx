@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScriptSettings as SettingsType } from '../types';
 
 interface ScriptSettingsProps {
@@ -6,12 +6,137 @@ interface ScriptSettingsProps {
     updateSettings: (key: keyof SettingsType, value: any) => void;
 }
 
+interface MediaDevice {
+    deviceId: string;
+    label: string;
+    kind: string;
+}
+
 const ScriptSettings: React.FC<ScriptSettingsProps> = ({ settings, updateSettings }) => {
+    const [microphones, setMicrophones] = useState<MediaDevice[]>([]);
+    const [cameras, setCameras] = useState<MediaDevice[]>([]);
+    const [devicesLoaded, setDevicesLoaded] = useState(false);
+
+    // Load available devices
+    useEffect(() => {
+        const loadDevices = async () => {
+            try {
+                // Request permission first to get device labels
+                await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+
+                const devices = await navigator.mediaDevices.enumerateDevices();
+
+                const mics = devices
+                    .filter(d => d.kind === 'audioinput')
+                    .map(d => ({
+                        deviceId: d.deviceId,
+                        label: d.label || `麦克风 ${d.deviceId.slice(0, 8)}`,
+                        kind: d.kind
+                    }));
+
+                const cams = devices
+                    .filter(d => d.kind === 'videoinput')
+                    .map(d => ({
+                        deviceId: d.deviceId,
+                        label: d.label || `摄像头 ${d.deviceId.slice(0, 8)}`,
+                        kind: d.kind
+                    }));
+
+                setMicrophones(mics);
+                setCameras(cams);
+                setDevicesLoaded(true);
+
+                // Auto-select first device if none selected
+                if (!settings.selectedMicId && mics.length > 0) {
+                    updateSettings('selectedMicId', mics[0].deviceId);
+                }
+                if (!settings.selectedCameraId && cams.length > 0) {
+                    updateSettings('selectedCameraId', cams[0].deviceId);
+                }
+            } catch (err) {
+                console.error('Error loading devices:', err);
+            }
+        };
+
+        loadDevices();
+
+        // Listen for device changes
+        navigator.mediaDevices.addEventListener('devicechange', loadDevices);
+        return () => {
+            navigator.mediaDevices.removeEventListener('devicechange', loadDevices);
+        };
+    }, []);
+
     return (
         <aside className="w-80 bg-white dark:bg-[#1a202c] border-l border-[#e5e7eb] dark:border-[#2d3748] flex flex-col overflow-y-auto shrink-0 z-10 shadow-lg h-full">
             <div className="p-5 border-b border-gray-100 dark:border-gray-800">
                 <h3 className="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">提词器设置</h3>
                 <p className="text-sm text-gray-500 mt-1">调整提词器的显示效果</p>
+            </div>
+
+            {/* Device Selection Section */}
+            <div className="p-5 border-b border-gray-50 dark:border-gray-800/50 bg-orange-50/30 dark:bg-orange-900/10">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="size-6 rounded-md bg-orange-200 dark:bg-orange-900 text-orange-700 dark:text-orange-300 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-sm">settings_input_component</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">设备选择</span>
+                </div>
+
+                {/* Microphone Selection */}
+                <div className="mb-4">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-2">
+                        <span className="material-symbols-outlined text-sm">mic</span>
+                        麦克风
+                    </label>
+                    <select
+                        value={settings.selectedMicId || ''}
+                        onChange={(e) => updateSettings('selectedMicId', e.target.value)}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 outline-none focus:border-primary transition cursor-pointer"
+                    >
+                        {!devicesLoaded ? (
+                            <option>加载中...</option>
+                        ) : microphones.length === 0 ? (
+                            <option>未找到麦克风</option>
+                        ) : (
+                            microphones.map((mic) => (
+                                <option key={mic.deviceId} value={mic.deviceId}>
+                                    {mic.label}
+                                </option>
+                            ))
+                        )}
+                    </select>
+                </div>
+
+                {/* Camera Selection */}
+                <div>
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-2">
+                        <span className="material-symbols-outlined text-sm">videocam</span>
+                        摄像头
+                    </label>
+                    <select
+                        value={settings.selectedCameraId || ''}
+                        onChange={(e) => updateSettings('selectedCameraId', e.target.value)}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 outline-none focus:border-primary transition cursor-pointer"
+                    >
+                        {!devicesLoaded ? (
+                            <option>加载中...</option>
+                        ) : cameras.length === 0 ? (
+                            <option>未找到摄像头</option>
+                        ) : (
+                            cameras.map((cam) => (
+                                <option key={cam.deviceId} value={cam.deviceId}>
+                                    {cam.label}
+                                </option>
+                            ))
+                        )}
+                    </select>
+                </div>
+
+                <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">info</span>
+                    选择录制时使用的音视频设备
+                </p>
             </div>
 
             {/* Font Size Slider */}
