@@ -10,6 +10,7 @@ export interface ScriptSettings {
     opacity: number;
     selectedMicId: string;
     selectedCameraId: string;
+    beautyFilter: 'none' | 'natural' | 'bright' | 'warm' | 'cool' | 'vintage' | 'soft';
 }
 
 export interface AppState {

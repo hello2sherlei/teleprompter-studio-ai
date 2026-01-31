@@ -83,7 +83,8 @@ const App: React.FC = () => {
             eyeContactFix: false,
             opacity: 10,
             selectedMicId: '',
-            selectedCameraId: ''
+            selectedCameraId: '',
+            beautyFilter: 'natural'
         };
     });
 

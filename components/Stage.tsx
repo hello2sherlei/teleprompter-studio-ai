@@ -154,6 +154,33 @@ const Stage = forwardRef<StageRef, StageProps>(({
         }
     };
 
+    // Beauty filter CSS styles
+    const getFilterStyle = (): React.CSSProperties => {
+        switch (settings.beautyFilter) {
+            case 'natural':
+                // Subtle skin smoothing and brightness
+                return { filter: 'brightness(1.05) contrast(0.95) saturate(1.05)' };
+            case 'bright':
+                // Brighter, more vivid
+                return { filter: 'brightness(1.15) contrast(1.05) saturate(1.1)' };
+            case 'warm':
+                // Warm tones
+                return { filter: 'brightness(1.05) contrast(1.02) saturate(1.1) sepia(0.15)' };
+            case 'cool':
+                // Cool, blue tones
+                return { filter: 'brightness(1.05) contrast(1.05) saturate(0.9) hue-rotate(-10deg)' };
+            case 'vintage':
+                // Retro look
+                return { filter: 'brightness(1.0) contrast(1.1) saturate(0.8) sepia(0.25)' };
+            case 'soft':
+                // Soft focus, dreamy
+                return { filter: 'brightness(1.08) contrast(0.92) saturate(1.05) blur(0.3px)' };
+            case 'none':
+            default:
+                return {};
+        }
+    };
+
     return (
         <section className="flex-1 flex flex-col relative bg-gray-100 dark:bg-black p-4 md:p-6 overflow-hidden items-center justify-center">
 
@@ -191,14 +218,17 @@ const Stage = forwardRef<StageRef, StageProps>(({
                 {/* Hidden canvas for recording composite */}
                 <canvas ref={canvasRef} className="hidden" />
 
-                {/* Camera Feed */}
+                {/* Camera Feed with Beauty Filter */}
                 <video
                     ref={videoRef}
                     autoPlay
                     muted
                     playsInline
                     className={`absolute inset-0 w-full h-full object-cover ${settings.mirrorVideo ? '-scale-x-100' : ''}`}
-                    style={{ display: cameraActive ? 'block' : 'none' }}
+                    style={{
+                        display: cameraActive ? 'block' : 'none',
+                        ...getFilterStyle()
+                    }}
                 />
 
                 {/* Fallback when camera is off */}

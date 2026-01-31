@@ -139,6 +139,49 @@ const ScriptSettings: React.FC<ScriptSettingsProps> = ({ settings, updateSetting
                 </p>
             </div>
 
+            {/* Beauty Filter Section */}
+            <div className="p-5 border-b border-gray-50 dark:border-gray-800/50 bg-pink-50/30 dark:bg-pink-900/10">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="size-6 rounded-md bg-pink-200 dark:bg-pink-900 text-pink-700 dark:text-pink-300 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-sm">face_retouching_natural</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">美颜滤镜</span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                    {[
+                        { id: 'none', label: '原图', icon: 'block' },
+                        { id: 'natural', label: '自然', icon: 'spa' },
+                        { id: 'bright', label: '提亮', icon: 'light_mode' },
+                        { id: 'warm', label: '暖色', icon: 'thermostat' },
+                        { id: 'cool', label: '冷色', icon: 'ac_unit' },
+                        { id: 'vintage', label: '复古', icon: 'photo_camera' },
+                        { id: 'soft', label: '柔焦', icon: 'blur_on' },
+                    ].map((filter) => (
+                        <button
+                            key={filter.id}
+                            onClick={() => updateSettings('beautyFilter', filter.id)}
+                            className={`flex flex-col items-center gap-1 p-2 rounded-lg transition ${settings.beautyFilter === filter.id
+                                    ? 'bg-pink-100 dark:bg-pink-900/50 border-2 border-pink-400'
+                                    : 'bg-gray-100 dark:bg-gray-800 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            <span className={`material-symbols-outlined text-lg ${settings.beautyFilter === filter.id ? 'text-pink-500' : 'text-gray-500'}`}>
+                                {filter.icon}
+                            </span>
+                            <span className={`text-[10px] font-medium ${settings.beautyFilter === filter.id ? 'text-pink-600 dark:text-pink-400' : 'text-gray-500'}`}>
+                                {filter.label}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+
+                <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">auto_awesome</span>
+                    实时预览美颜效果
+                </p>
+            </div>
+
             {/* Font Size Slider */}
             <div className="p-5 border-b border-gray-50 dark:border-gray-800/50">
                 <div className="flex items-center justify-between mb-3">
