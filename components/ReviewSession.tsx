@@ -139,9 +139,11 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
         // For cropped view, use target aspect ratio
         return {
             aspectRatio: `${targetRatio}`,
-            maxHeight: targetAspectRatio === '9:16' ? '500px' : '400px',
-            maxWidth: targetAspectRatio === '9:16' ? '280px' : '100%',
-            margin: targetAspectRatio === '9:16' ? '0 auto' : undefined
+            // Make the container larger to match the recording preview
+            maxHeight: targetAspectRatio === '9:16' ? '75vh' : '60vh',
+            maxWidth: targetAspectRatio === '9:16' ? '450px' : '100%',
+            width: targetAspectRatio === '9:16' ? '100%' : undefined,
+            margin: '0 auto'
         };
     };
 
