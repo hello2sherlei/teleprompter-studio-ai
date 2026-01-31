@@ -195,8 +195,8 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
                     </div>
                 </div>
 
-                {/* Crop Info Banner */}
-                {targetAspectRatio !== 'original' && (
+                {/* Crop Info Banner - Only show when cropping is needed */}
+                {targetAspectRatio !== 'original' && targetAspectRatio !== recordingAspectRatio && (
                     <div className="mb-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center gap-2">
                         <span className="material-symbols-outlined text-blue-500 text-lg">crop</span>
                         <span className="text-sm text-blue-700 dark:text-blue-300">
@@ -220,8 +220,9 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
                                         src={videoUrl}
                                         className="absolute"
                                         style={{
-                                            // Use object-fit: cover to crop and fill the container
-                                            objectFit: targetAspectRatio === 'original' ? 'contain' : 'cover',
+                                            // Only use cover (crop) when export ratio differs from recording ratio
+                                            // When same ratio or 'original', use contain to show full video
+                                            objectFit: (targetAspectRatio === 'original' || targetAspectRatio === recordingAspectRatio) ? 'contain' : 'cover',
                                             objectPosition: 'center',
                                             width: '100%',
                                             height: '100%'
