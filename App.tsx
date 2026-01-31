@@ -93,6 +93,11 @@ const App: React.FC = () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
 
+    // Canvas processing refs
+    const processingCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const processingVideoRef = useRef<HTMLVideoElement | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+
     // Effects
     useEffect(() => {
         if (darkMode) {
@@ -227,31 +232,89 @@ const App: React.FC = () => {
     };
 
     // Recording functions
+    // Recording functions
     const startRecording = useCallback(async () => {
         try {
-            // Calculate ideal dimensions based on aspect ratio
-            // For 9:16, we want portrait; for 16:9, we want landscape
-            const is916 = aspectRatio === '9:16';
-            const idealWidth = is916 ? 1080 : 1920;
-            const idealHeight = is916 ? 1920 : 1080;
-
-            // Build constraints with selected devices and aspect ratio
+            // Build constraints with selected devices
+            // We request highest resolution possible, then crop manually using Canvas
             const videoConstraints: MediaTrackConstraints = {
-                width: { ideal: idealWidth },
-                height: { ideal: idealHeight },
-                aspectRatio: { ideal: is916 ? 9 / 16 : 16 / 9 },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
                 ...(settings.selectedCameraId && { deviceId: { exact: settings.selectedCameraId } })
             };
             const audioConstraints: boolean | MediaTrackConstraints = micOn
                 ? (settings.selectedMicId ? { deviceId: { exact: settings.selectedMicId } } : true)
                 : false;
 
-            const stream = await navigator.mediaDevices.getUserMedia({
+            const sourceStream = await navigator.mediaDevices.getUserMedia({
                 video: videoConstraints,
                 audio: audioConstraints
             });
 
-            const mediaRecorder = new MediaRecorder(stream, {
+            // Create canvas and video elements for processing if they don't exist
+            if (!processingCanvasRef.current) {
+                processingCanvasRef.current = document.createElement('canvas');
+            }
+            if (!processingVideoRef.current) {
+                processingVideoRef.current = document.createElement('video');
+                processingVideoRef.current.autoplay = true;
+                processingVideoRef.current.muted = true;
+                processingVideoRef.current.playsInline = true;
+            }
+
+            const canvas = processingCanvasRef.current;
+            const video = processingVideoRef.current;
+
+            // Set canvas target resolution based on selected aspect ratio
+            const is916 = aspectRatio === '9:16';
+
+            // Use 1080p vertical as target for 9:16 to ensure high quality
+            // For 16:9, use 1920x1080
+            canvas.width = is916 ? 1080 : 1920;
+            canvas.height = is916 ? 1920 : 1080;
+
+            // Set up video source
+            video.srcObject = sourceStream;
+            await video.play();
+
+            // Draw loop function
+            const draw = () => {
+                if (!canvas || !video) return;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+
+                const targetW = canvas.width;
+                const targetH = canvas.height;
+                const videoW = video.videoWidth;
+                const videoH = video.videoHeight;
+
+                // Calculate scale to cover
+                const scale = Math.max(targetW / videoW, targetH / videoH);
+
+                const scaledW = videoW * scale;
+                const scaledH = videoH * scale;
+
+                // Center crop
+                const x = (targetW - scaledW) / 2;
+                const y = (targetH - scaledH) / 2;
+
+                ctx.drawImage(video, x, y, scaledW, scaledH);
+
+                animationFrameRef.current = requestAnimationFrame(draw);
+            };
+
+            // Start processing loop
+            draw();
+
+            // Get stream from canvas (30 FPS)
+            const canvasStream = canvas.captureStream(30);
+
+            // Add audio tracks from source stream
+            sourceStream.getAudioTracks().forEach(track => {
+                canvasStream.addTrack(track);
+            });
+
+            const mediaRecorder = new MediaRecorder(canvasStream, {
                 mimeType: 'video/webm;codecs=vp9'
             });
 
@@ -266,9 +329,19 @@ const App: React.FC = () => {
             mediaRecorder.onstop = () => {
                 const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
                 setRecordedBlob(blob);
-                // Switch to review mode when recording stops
                 setViewMode('review');
-                stream.getTracks().forEach(track => track.stop());
+
+                // Cleanup streams
+                canvasStream.getTracks().forEach(track => track.stop());
+                sourceStream.getTracks().forEach(track => track.stop());
+                if (animationFrameRef.current) {
+                    cancelAnimationFrame(animationFrameRef.current);
+                }
+
+                // Reset processing elements
+                if (processingVideoRef.current) {
+                    processingVideoRef.current.srcObject = null;
+                }
             };
 
             mediaRecorderRef.current = mediaRecorder;
