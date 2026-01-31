@@ -1,0 +1,8 @@
+{
+  "name": "Teleprompter Studio AI",
+  "description": "A professional AI-powered teleprompter web application with Gemini integration for script generation and real-time settings.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
