@@ -410,6 +410,7 @@ const App: React.FC = () => {
                 recordedBlob={recordedBlob}
                 script={script}
                 recordingDuration={recordingDuration}
+                recordingAspectRatio={aspectRatio}
                 onBack={clearRecording}
                 onDownload={handleDownload}
                 onDelete={clearRecording}

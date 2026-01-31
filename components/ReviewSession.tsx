@@ -4,6 +4,7 @@ interface ReviewSessionProps {
     recordedBlob: Blob;
     script: string;
     recordingDuration: number;
+    recordingAspectRatio?: '16:9' | '9:16'; // Aspect ratio selected during recording
     onBack: () => void;
     onDownload: () => void;
     onDelete: () => void;
@@ -13,6 +14,7 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
     recordedBlob,
     script,
     recordingDuration,
+    recordingAspectRatio = '16:9',
     onBack,
     onDownload,
     onDelete
@@ -24,7 +26,8 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
     const [videoUrl, setVideoUrl] = useState<string>('');
     const [format, setFormat] = useState<'MP4' | 'WebM'>('MP4');
     const [resolution, setResolution] = useState('1080p HD');
-    const [targetAspectRatio, setTargetAspectRatio] = useState<'16:9' | '9:16' | '1:1' | 'original'>('original');
+    // Default to the recording aspect ratio instead of 'original'
+    const [targetAspectRatio, setTargetAspectRatio] = useState<'16:9' | '9:16' | '1:1' | 'original'>(recordingAspectRatio);
     const [originalAspectRatio, setOriginalAspectRatio] = useState<number>(16 / 9);
 
     const recordingDate = new Date().toLocaleDateString('zh-CN', {
