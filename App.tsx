@@ -322,8 +322,8 @@ const App: React.FC = () => {
             const url = URL.createObjectURL(recordedBlob);
             const a = document.createElement('a');
             a.href = url;
-            // Download with .mp4 extension for better compatibility
-            a.download = `teleprompter-recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.mp4`;
+            // Download as WebM
+            a.download = `teleprompter-recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
