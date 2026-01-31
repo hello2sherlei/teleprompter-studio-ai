@@ -21,10 +21,10 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [videoDuration, setVideoDuration] = useState(recordingDuration);
-    const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
     const [videoUrl, setVideoUrl] = useState<string>('');
     const [format, setFormat] = useState<'MP4' | 'WebM'>('MP4');
     const [resolution, setResolution] = useState('1080p HD');
+    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
 
     // Get recording date
     const recordingDate = new Date().toLocaleDateString('zh-CN', {
@@ -66,6 +66,12 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
             if (isFinite(dur) && !isNaN(dur) && dur > 0) {
                 setVideoDuration(dur);
             }
+            // Auto-detect video aspect ratio
+            const width = videoRef.current.videoWidth;
+            const height = videoRef.current.videoHeight;
+            if (width && height) {
+                setVideoAspectRatio(width / height);
+            }
         }
     };
 
@@ -74,6 +80,12 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
             const dur = videoRef.current.duration;
             if (isFinite(dur) && !isNaN(dur) && dur > 0 && videoDuration === 0) {
                 setVideoDuration(dur);
+            }
+            // Auto-detect video aspect ratio
+            const width = videoRef.current.videoWidth;
+            const height = videoRef.current.videoHeight;
+            if (width && height && !videoAspectRatio) {
+                setVideoAspectRatio(width / height);
             }
         }
     };
@@ -112,6 +124,15 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
     // Use recording duration if video duration is not available
     const displayDuration = videoDuration > 0 ? videoDuration : recordingDuration;
 
+    // Determine aspect ratio label for display
+    const getAspectRatioLabel = () => {
+        if (!videoAspectRatio) return '检测中';
+        if (videoAspectRatio > 1.5) return '16:9 横屏';
+        if (videoAspectRatio < 0.7) return '9:16 竖屏';
+        if (videoAspectRatio >= 0.9 && videoAspectRatio <= 1.1) return '1:1 正方形';
+        return `${videoAspectRatio.toFixed(2)}`;
+    };
+
     return (
         <div
             className="fixed inset-0 bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-900 dark:to-gray-800 z-[100]"
@@ -138,20 +159,10 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">回顾录制内容</h1>
 
-                    {/* Aspect Ratio Buttons */}
-                    <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
-                        {(['16:9', '9:16', '1:1'] as const).map((ratio) => (
-                            <button
-                                key={ratio}
-                                onClick={() => setAspectRatio(ratio)}
-                                className={`px-2 py-1 text-xs font-medium rounded-md flex items-center gap-1 transition ${aspectRatio === ratio
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    }`}
-                            >
-                                {ratio}
-                            </button>
-                        ))}
+                    {/* Auto-detected aspect ratio badge */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <span className="material-symbols-outlined text-sm text-primary">aspect_ratio</span>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{getAspectRatioLabel()}</span>
                     </div>
                 </div>
 
@@ -159,19 +170,16 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
                     {/* Video Player - Left Side */}
                     <div className="lg:col-span-3">
                         <div className="bg-gray-900 rounded-xl overflow-hidden shadow-xl">
-                            {/* Video Container */}
-                            <div
-                                className="relative flex items-center justify-center bg-black"
-                                style={{
-                                    aspectRatio: aspectRatio === '16:9' ? '16/9' : aspectRatio === '9:16' ? '9/16' : '1/1',
-                                    maxHeight: '380px'
-                                }}
-                            >
+                            {/* Video Container - Auto aspect ratio */}
+                            <div className="relative flex items-center justify-center bg-black">
                                 {videoUrl && (
                                     <video
                                         ref={videoRef}
                                         src={videoUrl}
-                                        className="max-w-full max-h-full object-contain"
+                                        className="w-full h-auto max-h-[70vh]"
+                                        style={{
+                                            objectFit: 'contain'
+                                        }}
                                         onTimeUpdate={handleTimeUpdate}
                                         onLoadedMetadata={handleLoadedMetadata}
                                         onCanPlay={handleCanPlay}
