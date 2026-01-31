@@ -9,6 +9,9 @@ interface ScriptEditorProps {
     fontSize: number;
     onScrollSpeedChange: (speed: number) => void;
     onFontSizeChange: (size: number) => void;
+    onSave?: () => void;
+    isSaving?: boolean;
+    hasUnsavedChanges?: boolean;
 }
 
 const ScriptEditor: React.FC<ScriptEditorProps> = ({
@@ -18,7 +21,10 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
     scrollSpeed,
     fontSize,
     onScrollSpeedChange,
-    onFontSizeChange
+    onFontSizeChange,
+    onSave,
+    isSaving = false,
+    hasUnsavedChanges = false
 }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [showSpeedPicker, setShowSpeedPicker] = useState(false);
@@ -55,11 +61,48 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
             <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-lavender/30 dark:bg-lavender-dark/10">
                 <div>
                     <h1 className="text-base font-bold text-gray-900 dark:text-white">脚本编辑器</h1>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{charCount} 字符 · {wordCount} 词</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
+                        {charCount} 字符 · {wordCount} 词
+                        {hasUnsavedChanges && (
+                            <span className="text-orange-500 flex items-center gap-1">
+                                <span className="size-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                                未保存
+                            </span>
+                        )}
+                        {isSaving && (
+                            <span className="text-green-500 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-xs animate-spin">sync</span>
+                                保存中
+                            </span>
+                        )}
+                        {!hasUnsavedChanges && !isSaving && (
+                            <span className="text-green-500 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-xs">check_circle</span>
+                                已保存
+                            </span>
+                        )}
+                    </p>
                 </div>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    <span className="material-symbols-outlined">close_fullscreen</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Save Button */}
+                    {onSave && (
+                        <button
+                            onClick={onSave}
+                            disabled={!hasUnsavedChanges || isSaving}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${hasUnsavedChanges && !isSaving
+                                    ? 'bg-primary text-white hover:bg-blue-600'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                                }`}
+                            title="保存脚本 (自动保存已开启)"
+                        >
+                            <span className="material-symbols-outlined text-sm">save</span>
+                            保存
+                        </button>
+                    )}
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <span className="material-symbols-outlined">close_fullscreen</span>
+                    </button>
+                </div>
             </div>
 
             {/* Toolbar */}

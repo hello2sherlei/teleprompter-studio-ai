@@ -13,20 +13,32 @@ import { ScriptSettings as SettingsType, Script } from './types';
 const STORAGE_KEYS = {
     SCRIPTS: 'teleprompter_scripts',
     DARK_MODE: 'teleprompter_dark_mode',
-    SETTINGS: 'teleprompter_settings'
+    SETTINGS: 'teleprompter_settings',
+    CURRENT_SCRIPT: 'teleprompter_current_script'
 };
 
 const App: React.FC = () => {
-    // State
-    const [mode, setMode] = useState<'studio' | 'library' | 'settings'>('studio');
-    const [viewMode, setViewMode] = useState<'studio' | 'review'>('studio');
-    const [script, setScript] = useState<string>(`欢迎回来，今天我们继续录制。
+    // Default script content
+    const defaultScript = `欢迎回来，今天我们继续录制。
 
 这是一个由 AI 驱动的专业提词器应用，帮助你流畅地完成视频录制。
 
 记得点击下方的播放按钮开始自动滚动，调整设置中的滚动速度以适应你的语速。
 
-让我们开始吧...`);
+让我们开始吧...`;
+
+    // State
+    const [mode, setMode] = useState<'studio' | 'library' | 'settings'>('studio');
+    const [viewMode, setViewMode] = useState<'studio' | 'review'>('studio');
+    const [script, setScript] = useState<string>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_SCRIPT);
+        return saved ? saved : defaultScript;
+    });
+    const [lastSavedScript, setLastSavedScript] = useState<string>(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_SCRIPT);
+        return saved ? saved : defaultScript;
+    });
+    const [isSaving, setIsSaving] = useState(false);
 
     const [isRecording, setIsRecording] = useState(false);
     const [isScrolling, setIsScrolling] = useState(false);
@@ -97,6 +109,25 @@ const App: React.FC = () => {
     useEffect(() => {
         localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     }, [settings]);
+
+    // Auto-save script with debounce
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (script !== lastSavedScript) {
+                localStorage.setItem(STORAGE_KEYS.CURRENT_SCRIPT, script);
+                setLastSavedScript(script);
+            }
+        }, 1000); // Save 1 second after user stops typing
+        return () => clearTimeout(timer);
+    }, [script, lastSavedScript]);
+
+    // Manual save function
+    const saveScript = useCallback(() => {
+        setIsSaving(true);
+        localStorage.setItem(STORAGE_KEYS.CURRENT_SCRIPT, script);
+        setLastSavedScript(script);
+        setTimeout(() => setIsSaving(false), 1000);
+    }, [script]);
 
     // AI Speech Sync
     useEffect(() => {
@@ -357,6 +388,9 @@ const App: React.FC = () => {
                     fontSize={settings.fontSize}
                     onScrollSpeedChange={(speed) => updateSettings('scrollSpeed', speed)}
                     onFontSizeChange={(size) => updateSettings('fontSize', size)}
+                    onSave={saveScript}
+                    isSaving={isSaving}
+                    hasUnsavedChanges={script !== lastSavedScript}
                 />
             );
         }
