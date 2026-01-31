@@ -229,10 +229,19 @@ const App: React.FC = () => {
     // Recording functions
     const startRecording = useCallback(async () => {
         try {
-            // Build constraints with selected devices
-            const videoConstraints: boolean | MediaTrackConstraints = settings.selectedCameraId
-                ? { deviceId: { exact: settings.selectedCameraId } }
-                : true;
+            // Calculate ideal dimensions based on aspect ratio
+            // For 9:16, we want portrait; for 16:9, we want landscape
+            const is916 = aspectRatio === '9:16';
+            const idealWidth = is916 ? 1080 : 1920;
+            const idealHeight = is916 ? 1920 : 1080;
+
+            // Build constraints with selected devices and aspect ratio
+            const videoConstraints: MediaTrackConstraints = {
+                width: { ideal: idealWidth },
+                height: { ideal: idealHeight },
+                aspectRatio: { ideal: is916 ? 9 / 16 : 16 / 9 },
+                ...(settings.selectedCameraId && { deviceId: { exact: settings.selectedCameraId } })
+            };
             const audioConstraints: boolean | MediaTrackConstraints = micOn
                 ? (settings.selectedMicId ? { deviceId: { exact: settings.selectedMicId } } : true)
                 : false;
@@ -271,7 +280,7 @@ const App: React.FC = () => {
             console.error('Recording error:', error);
             alert('无法开始录制，请确保允许摄像头和麦克风权限');
         }
-    }, [micOn]);
+    }, [micOn, aspectRatio, settings]);
 
     const stopRecording = useCallback(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -313,7 +322,8 @@ const App: React.FC = () => {
             const url = URL.createObjectURL(recordedBlob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `teleprompter-recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+            // Download with .mp4 extension for better compatibility
+            a.download = `teleprompter-recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.mp4`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
