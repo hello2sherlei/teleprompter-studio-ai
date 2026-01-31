@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 interface ReviewSessionProps {
     recordedBlob: Blob;
     script: string;
-    recordingDuration: number; // Duration in seconds passed from parent
+    recordingDuration: number;
     onBack: () => void;
     onDownload: () => void;
     onDelete: () => void;
@@ -24,9 +24,9 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
     const [videoUrl, setVideoUrl] = useState<string>('');
     const [format, setFormat] = useState<'MP4' | 'WebM'>('MP4');
     const [resolution, setResolution] = useState('1080p HD');
-    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
+    const [targetAspectRatio, setTargetAspectRatio] = useState<'16:9' | '9:16' | '1:1' | 'original'>('original');
+    const [originalAspectRatio, setOriginalAspectRatio] = useState<number>(16 / 9);
 
-    // Get recording date
     const recordingDate = new Date().toLocaleDateString('zh-CN', {
         year: 'numeric',
         month: 'long',
@@ -35,10 +35,8 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
         minute: '2-digit'
     });
 
-    // Word count from script
     const wordCount = script.replace(/\s/g, '').length;
 
-    // Create video URL once on mount
     useEffect(() => {
         const url = URL.createObjectURL(recordedBlob);
         setVideoUrl(url);
@@ -47,7 +45,6 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
         };
     }, [recordedBlob]);
 
-    // Use passed duration if video duration fails
     useEffect(() => {
         if (recordingDuration > 0 && videoDuration === 0) {
             setVideoDuration(recordingDuration);
@@ -66,11 +63,10 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
             if (isFinite(dur) && !isNaN(dur) && dur > 0) {
                 setVideoDuration(dur);
             }
-            // Auto-detect video aspect ratio
             const width = videoRef.current.videoWidth;
             const height = videoRef.current.videoHeight;
             if (width && height) {
-                setVideoAspectRatio(width / height);
+                setOriginalAspectRatio(width / height);
             }
         }
     };
@@ -80,12 +76,6 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
             const dur = videoRef.current.duration;
             if (isFinite(dur) && !isNaN(dur) && dur > 0 && videoDuration === 0) {
                 setVideoDuration(dur);
-            }
-            // Auto-detect video aspect ratio
-            const width = videoRef.current.videoWidth;
-            const height = videoRef.current.videoHeight;
-            if (width && height && !videoAspectRatio) {
-                setVideoAspectRatio(width / height);
             }
         }
     };
@@ -118,19 +108,38 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Calculate file size
     const fileSize = (recordedBlob.size / 1024 / 1024).toFixed(2);
-
-    // Use recording duration if video duration is not available
     const displayDuration = videoDuration > 0 ? videoDuration : recordingDuration;
 
-    // Determine aspect ratio label for display
-    const getAspectRatioLabel = () => {
-        if (!videoAspectRatio) return '检测中';
-        if (videoAspectRatio > 1.5) return '16:9 横屏';
-        if (videoAspectRatio < 0.7) return '9:16 竖屏';
-        if (videoAspectRatio >= 0.9 && videoAspectRatio <= 1.1) return '1:1 正方形';
-        return `${videoAspectRatio.toFixed(2)}`;
+    // Get the numeric aspect ratio for target
+    const getTargetRatio = () => {
+        switch (targetAspectRatio) {
+            case '16:9': return 16 / 9;
+            case '9:16': return 9 / 16;
+            case '1:1': return 1;
+            default: return originalAspectRatio;
+        }
+    };
+
+    // Calculate container dimensions to show cropped preview
+    const getContainerStyle = () => {
+        const targetRatio = getTargetRatio();
+
+        if (targetAspectRatio === 'original') {
+            // Show original aspect ratio
+            return {
+                aspectRatio: `${originalAspectRatio}`,
+                maxHeight: '450px'
+            };
+        }
+
+        // For cropped view, use target aspect ratio
+        return {
+            aspectRatio: `${targetRatio}`,
+            maxHeight: targetAspectRatio === '9:16' ? '500px' : '400px',
+            maxWidth: targetAspectRatio === '9:16' ? '280px' : '100%',
+            margin: targetAspectRatio === '9:16' ? '0 auto' : undefined
+        };
     };
 
     return (
@@ -159,26 +168,58 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
                 <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">回顾录制内容</h1>
 
-                    {/* Auto-detected aspect ratio badge */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <span className="material-symbols-outlined text-sm text-primary">aspect_ratio</span>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{getAspectRatioLabel()}</span>
+                    {/* Aspect Ratio Selection */}
+                    <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
+                        {(['original', '16:9', '9:16', '1:1'] as const).map((ratio) => (
+                            <button
+                                key={ratio}
+                                onClick={() => setTargetAspectRatio(ratio)}
+                                className={`px-2.5 py-1 text-xs font-medium rounded-md flex items-center gap-1 transition ${targetAspectRatio === ratio
+                                    ? 'bg-primary/10 text-primary border border-primary/20'
+                                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    }`}
+                            >
+                                {ratio === 'original' ? (
+                                    <>
+                                        <span className="material-symbols-outlined text-xs">crop_free</span>
+                                        原始
+                                    </>
+                                ) : ratio}
+                            </button>
+                        ))}
                     </div>
                 </div>
+
+                {/* Crop Info Banner */}
+                {targetAspectRatio !== 'original' && (
+                    <div className="mb-4 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-blue-500 text-lg">crop</span>
+                        <span className="text-sm text-blue-700 dark:text-blue-300">
+                            智能裁剪: 视频将从中心裁剪为 {targetAspectRatio} 比例
+                        </span>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     {/* Video Player - Left Side */}
                     <div className="lg:col-span-3">
                         <div className="bg-gray-900 rounded-xl overflow-hidden shadow-xl">
-                            {/* Video Container - Auto aspect ratio */}
-                            <div className="relative flex items-center justify-center bg-black">
+                            {/* Video Container with Crop */}
+                            <div
+                                className="relative flex items-center justify-center bg-black overflow-hidden"
+                                style={getContainerStyle()}
+                            >
                                 {videoUrl && (
                                     <video
                                         ref={videoRef}
                                         src={videoUrl}
-                                        className="w-full h-auto max-h-[70vh]"
+                                        className="absolute"
                                         style={{
-                                            objectFit: 'contain'
+                                            // Use object-fit: cover to crop and fill the container
+                                            objectFit: targetAspectRatio === 'original' ? 'contain' : 'cover',
+                                            objectPosition: 'center',
+                                            width: '100%',
+                                            height: '100%'
                                         }}
                                         onTimeUpdate={handleTimeUpdate}
                                         onLoadedMetadata={handleLoadedMetadata}
@@ -193,7 +234,7 @@ const ReviewSession: React.FC<ReviewSessionProps> = ({
                                 {!isPlaying && (
                                     <button
                                         onClick={togglePlay}
-                                        className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition"
+                                        className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition z-10"
                                     >
                                         <div className="size-16 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-2xl hover:scale-105 transition-transform">
                                             <span className="material-symbols-outlined text-3xl text-gray-800 ml-1">play_arrow</span>
